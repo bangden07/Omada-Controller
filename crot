@@ -1,0 +1,67 @@
+#!/bin/bash
+#title           :crot.sh
+#description     :Installer Omada Controller untuk Ubuntu
+#supported       :Ubuntu 16.04, Ubuntu 18.04, Ubuntu 20.04, dan Ubuntu 22.04
+#author          :Bang Den
+
+# Versi Omada
+OmadaPackageUrl=https://static.tp-link.com/upload/software/2023/202309/20230920/Omada_SDN_Controller_v5.12.7_Linux_x64.deb
+
+OS=$(hostnamectl status | grep "Operating System")
+echo $OS
+
+if [[ $OS = *"Ubuntu 16.04"* ]]; then
+    OsVer=xenial
+elif [[ $OS = *"Ubuntu 18.04"* ]]; then
+    OsVer=bionic
+elif [[ $OS = *"Ubuntu 20.04"* ]]; then
+    OsVer=focal
+elif [[ $OS = *"Ubuntu 22.04"* ]]; then
+    OsVer=jammy
+else
+    echo -e "\e[1;31mERROR: Script ini hanya berjalan di Ubuntu 16.04, 18.04, 20.04, atau 22.04! \e[0m"
+    exit
+fi
+
+# Update dan upgrade
+sudo apt-get update && sudo apt-get upgrade -y
+        
+# Import MongoDB Terbaru
+apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 656408E390CFB1F5
+echo "deb http://repo.mongodb.org/apt/ubuntu $OsVer/mongodb-org/7.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+
+# Install/update dependensi
+apt-get -qq update
+apt-get -y install openjdk-8-jre-headless mongodb-org jsvc curl
+
+# Download paket Omada Controller dan install
+wget $OmadaPackageUrl -P /tmp/
+dpkg -i /tmp/$(basename $OmadaPackageUrl)
+
+# Install SSL
+snap install core; sudo snap refresh core
+snap install --classic certbot
+ln -s /snap/bin/certbot /usr/bin/certbot
+read -p "Domain : " domain
+certbot certonly --standalone --preferred-challenges http -d $domain
+
+sudo tpeap stop
+
+rm /opt/tplink/EAPController/data/keystore/eap.cer
+rm /opt/tplink/EAPController/data/keystore/eap.keystore
+
+cp /etc/letsencrypt/live/$domain/cert.pem /opt/tplink/EAPController/data/keystore/eap.cer
+
+openssl pkcs12 -export -inkey /etc/letsencrypt/live/$domain/privkey.pem \
+-in /etc/letsencrypt/live/$domain/cert.pem \
+-certfile /etc/letsencrypt/live/$domain/chain.pem \
+-name eap -out patrick.p12 -password pass:tplink
+
+keytool -importkeystore -deststorepass tplink \
+-destkeystore /opt/tplink/EAPController/data/keystore/eap.keystore \
+-srckeystore patrick.p12 -srcstoretype PKCS12 -srcstorepass tplink
+
+sudo tpeap start
+
+hostIP=$(hostname -I | cut -f1 -d' ')
+echo -e "\n\nOmada SDN Controller berhasil diinstall! \nKunjungi https://$domain:8043 untuk mengatur device yang akan dihubungkan ke Omada Controller. :)"
