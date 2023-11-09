@@ -25,17 +25,24 @@ fi
 
 # Update dan upgrade
 sudo apt-get update && sudo apt-get upgrade -y
-        
+clear
+
 # Import MongoDB Terbaru
 #	apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 656408E390CFB1F5
 #	echo "deb http://repo.mongodb.org/apt/ubuntu $OsVer/mongodb-org/7.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-7.0.list
 
+sudo apt-get install software-properties-common gnupg apt-transport-https ca-certificates -y
+curl -fsSL https://pgp.mongodb.com/server-7.0.asc |  sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
+echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+cat /etc/apt/sources.list.d/mongodb-org-7.0.list
+sleep 5
+sudo apt-get -qq update
+sudo apt-get install mongodb-org -y
+
 # Install/update dependensi
-apt-get -qq update
-apt-get -y install openjdk-8-jre-headless
-apt-get -y install jsvc
-apt-get -y install mongodb
-apt-get -y install curl
+sudo apt-get -y install openjdk-8-jre-headless
+sudo apt-get -y install jsvc
+sudo apt-get -y install curl
 
 # Download paket Omada Controller dan install
 #	wget $OmadaPackageUrl -P /tmp/
