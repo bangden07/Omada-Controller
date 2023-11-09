@@ -5,7 +5,7 @@
 #author          :Bang Den
 
 # Versi Omada
-OmadaPackageUrl=https://static.tp-link.com/upload/software/2023/202309/20230920/Omada_SDN_Controller_v5.12.7_Linux_x64.deb
+#	OmadaPackageUrl=https://static.tp-link.com/upload/software/2023/202309/20230920/Omada_SDN_Controller_v5.12.7_Linux_x64.deb
 
 OS=$(hostnamectl status | grep "Operating System")
 echo $OS
@@ -27,21 +27,33 @@ fi
 sudo apt-get update && sudo apt-get upgrade -y
         
 # Import MongoDB Terbaru
-apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 656408E390CFB1F5
-echo "deb http://repo.mongodb.org/apt/ubuntu $OsVer/mongodb-org/7.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+#	apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 656408E390CFB1F5
+#	echo "deb http://repo.mongodb.org/apt/ubuntu $OsVer/mongodb-org/7.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-7.0.list
 
 # Install/update dependensi
 apt-get -qq update
-apt-get -y install openjdk-8-jre-headless mongodb-org jsvc curl
+apt-get -y install openjdk-8-jre-headless
+apt-get -y install jsvc
+apt-get -y install mongodb
+apt-get -y install curl
 
 # Download paket Omada Controller dan install
-wget $OmadaPackageUrl -P /tmp/
-dpkg -i /tmp/$(basename $OmadaPackageUrl)
+#	wget $OmadaPackageUrl -P /tmp/
+#	dpkg -i /tmp/$(basename $OmadaPackageUrl)
+mkdir omada -m 0755
+curl -L https://www.ochi.kim/Omada-Controller/Linux/Omada_SDN_Controller_v5.12.7_linux_x64_20230905160946_1695178517952.tar.gz | tar -xz -C omada/ --strip-components=1
+cd omada
+sudo chmod a+x install.sh
 
-# Install SSL
+# Install SDN
+sudo ./install.sh -y -n
+
+# Install Certbot
 snap install core; sudo snap refresh core
 snap install --classic certbot
 ln -s /snap/bin/certbot /usr/bin/certbot
+
+# Install SSL
 read -p "Domain : " domain
 certbot certonly --standalone --preferred-challenges http -d $domain
 
